@@ -64,16 +64,15 @@
 <div class="footer">© สถานีตำรวจภูธรเมืองกาฬสินธุ์</div>
 
 <script>
-    // URL ของ Web App ที่ Publish จาก Apps Script
+    // URL ของ Web App ที่ Publish จาก Apps Script (ตรวจสอบ URL ให้เป็นตัวล่าสุดเสมอ)
     const WEB_APP_URL ='https://script.google.com/macros/s/AKfycbwUgn-L45-Uc7y3C7rodAnMdQysw6DOs01C32ySBpS6uWlr5xZSWCvn_6OuIVFGkBXJ/exec';
 
     // 1. ตั้งค่าวันที่ขั้นต่ำเป็นวันนี้ (ห้ามเลือกย้อนหลัง)
-    // ใช้ timezone ไทยเพื่อให้วันที่ตรงกัน
     const now = new Date();
-    const today = now.toLocaleDateString('en-CA'); // คืนค่าเป็น YYYY-MM-DD
+    const today = now.toLocaleDateString('en-CA'); 
     document.getElementById('date').min = today;
 
-    // 2. ฟังก์ชันตรวจสอบวันที่ที่มีการจองแล้ว
+    // 2. ฟังก์ชันตรวจสอบวันที่ที่มีการจองแล้ว (Client-side Check)
     async function disableBookedDates() {
         try {
             const response = await fetch(WEB_APP_URL);
@@ -82,8 +81,9 @@
             
             dateInput.addEventListener('change', function() {
                 if (bookedDates.includes(this.value)) {
-                    alert('❌ ลงวันซ้ำท่านอื่น: วันที่ ' + this.value + ' มีผู้นัดหมายแล้ว กรุณาเลือกวันอื่นครับ');
-                    this.value = ''; // ล้างค่าออก
+                    // บ็อบอัพแจ้งเตือนกรณีเลือกวันที่ที่มีคนจองแล้วก่อนกดส่ง
+                    alert('❌ วันที่ ' + this.value + ' มีผู้นัดหมายแล้ว กรุณาเลือกวันอื่นครับ');
+                    this.value = ''; 
                 }
             });
         } catch (error) {
@@ -118,12 +118,18 @@
             const result = await response.text();
 
             if (result === 'duplicate') {
+                // บ็อบอัพแจ้งเตือนเมื่อเซิร์ฟเวอร์ตอบกลับว่าซ้ำ
+                alert('❌ ลงทะเบียนซ้ำ!\nขออภัยครับ วันที่นี้มีผู้ชองคิวไปก่อนหน้านี้แล้ว โปรดเลือกวันที่ใหม่');
+                
                 status.style.display = 'block';
                 status.style.backgroundColor = '#f8d7da';
                 status.style.color = '#721c24';
                 status.innerText = '❌ ลงวันซ้ำท่านอื่น: วันนี้มีผู้จองแล้ว โปรดเลือกวันที่อื่น';
-                document.getElementById('date').value = ''; // ให้เลือกใหม่
+                document.getElementById('date').value = ''; 
             } else if (result === 'success') {
+                // บ็อบอัพแจ้งเตือนเมื่อสำเร็จ
+                alert('✅ ลงทะเบียนนัดหมายสำเร็จ!\nเจ้าหน้าที่จะได้รับข้อมูลการนัดหมายของท่านแล้ว');
+                
                 status.style.display = 'block';
                 status.style.backgroundColor = '#d4edda';
                 status.style.color = '#155724';
