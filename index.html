@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบนัดหมายออนไลน์ - สภ.เมืองกาฬสินธุ์</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --police-red: #800000; --gold: #b8860b; --bg-color: #f0f2f5; }
+        body { font-family: 'Sarabun', sans-serif; background-color: var(--bg-color); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 500px; margin: 20px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-top: 8px solid var(--police-red); }
+        .header { text-align: center; margin-bottom: 25px; }
+        .header h2 { color: var(--police-red); margin: 10px 0 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: var(--police-red); }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        input:focus { outline: none; border-color: var(--gold); }
+        button { width: 100%; padding: 15px; background: var(--police-red); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:disabled { background: #ccc; }
+        #status { padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none; text-align: center; font-weight: bold; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #777; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <div style="font-size: 40px;">🚔</div>
+        <h2>สภ.เมืองกาฬสินธุ์</h2>
+        <p>ลงทะเบียนนัดหมายพนักงานสอบสวน</p>
+    </div>
+
+    <div id="status"></div>
+
+    <form id="bookingForm">
+        <div class="form-group">
+            <label>ชื่อ-นามสกุล</label>
+            <input type="text" id="name" placeholder="ระบุชื่อผู้ติดต่อ" required>
+        </div>
+        <div class="form-group">
+            <label>เบอร์โทรศัพท์</label>
+            <input type="tel" id="phone" placeholder="08xxxxxxxx" required>
+        </div>
+        <div class="form-group">
+            <label>วันที่นัดหมาย <span style="color: red; font-size: 12px;">(1 วัน รับ 1 นัด)</span></label>
+            <input type="date" id="date" required>
+        </div>
+        <div class="form-group">
+            <label>ช่วงเวลา</label>
+            <select id="time" required>
+                <option value="">-- เลือกเวลา --</option>
+                <option value="เช้า (09.00-12.00)">เช้า (09.00-12.00 น.)</option>
+                <option value="บ่าย (13.00-16.00)">บ่าย (13.00-16.00 น.)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>เรื่องที่ติดต่อ/เลขคดี</label>
+            <textarea id="details" rows="2" placeholder="เช่น มาให้ปากคำเพิ่มเติม"></textarea>
+        </div>
+        <button type="submit" id="submitBtn">ยืนยันการนัดหมาย</button>
+    </form>
+</div>
+
+<div class="footer">© สถานีตำรวจภูธรเมืองกาฬสินธุ์</div>
+
+<script>
+    // URL ของ Web App ที่ Publish จาก Apps Script
+    const WEB_APP_URL ='https://script.google.com/macros/s/AKfycbwUgn-L45-Uc7y3C7rodAnMdQysw6DOs01C32ySBpS6uWlr5xZSWCvn_6OuIVFGkBXJ/exec';
+
+    // 1. ตั้งค่าวันที่ขั้นต่ำเป็นวันนี้ (ห้ามเลือกย้อนหลัง)
+    // ใช้ timezone ไทยเพื่อให้วันที่ตรงกัน
+    const now = new Date();
+    const today = now.toLocaleDateString('en-CA'); // คืนค่าเป็น YYYY-MM-DD
+    document.getElementById('date').min = today;
+
+    // 2. ฟังก์ชันตรวจสอบวันที่ที่มีการจองแล้ว
+    async function disableBookedDates() {
+        try {
+            const response = await fetch(WEB_APP_URL);
+            const bookedDates = await response.json();
+            const dateInput = document.getElementById('date');
+            
+            dateInput.addEventListener('change', function() {
+                if (bookedDates.includes(this.value)) {
+                    alert('❌ ลงวันซ้ำท่านอื่น: วันที่ ' + this.value + ' มีผู้นัดหมายแล้ว กรุณาเลือกวันอื่นครับ');
+                    this.value = ''; // ล้างค่าออก
+                }
+            });
+        } catch (error) {
+            console.log('กำลังโหลดข้อมูลสถานะคิว...');
+        }
+    }
+    disableBookedDates();
+
+    // 3. ฟังก์ชันส่งข้อมูลนัดหมาย
+    document.getElementById('bookingForm').onsubmit = async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const status = document.getElementById('status');
+        
+        btn.disabled = true;
+        btn.innerText = 'กำลังตรวจสอบข้อมูล...';
+        status.style.display = 'none';
+
+        const payload = {
+            name: document.getElementById('name').value,
+            phone: document.getElementById('phone').value,
+            date: document.getElementById('date').value,
+            time: document.getElementById('time').value,
+            details: document.getElementById('details').value
+        };
+
+        try {
+            const response = await fetch(WEB_APP_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+            const result = await response.text();
+
+            if (result === 'duplicate') {
+                status.style.display = 'block';
+                status.style.backgroundColor = '#f8d7da';
+                status.style.color = '#721c24';
+                status.innerText = '❌ ลงวันซ้ำท่านอื่น: วันนี้มีผู้จองแล้ว โปรดเลือกวันที่อื่น';
+                document.getElementById('date').value = ''; // ให้เลือกใหม่
+            } else if (result === 'success') {
+                status.style.display = 'block';
+                status.style.backgroundColor = '#d4edda';
+                status.style.color = '#155724';
+                status.innerText = '✅ บันทึกและนัดหมายพนักงานสอบสวนสำเร็จ!';
+                document.getElementById('bookingForm').reset();
+                setTimeout(() => { location.reload(); }, 3000);
+            }
+        } catch (error) {
+            alert('เกิดข้อผิดพลาดในการเชื่อมต่อ: ' + error.message);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'ยืนยันการนัดหมาย';
+        }
+    };
+</script>
+
+</body>
+</html>
